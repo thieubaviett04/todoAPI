@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using TodoAPI.Models;
+using TodoAPI.Data;
 
 namespace TodoAPI.Controllers
 {
@@ -8,39 +10,24 @@ namespace TodoAPI.Controllers
     [ApiController]
     public class TodosController : ControllerBase
     {
-        private static List<TodoItem> items = new() 
-        { 
-            
-            new TodoItem
-            {
-                Id = 1,
-                Name = "Hoc ASP .NET core bai so 22",
-                IsComplete = false,
-                Description = "Hoc lam quen voi web API.",
-               
-            },
+        private readonly TodoDbContext _context;
 
-            new TodoItem
-            {
-                Id = 2,
-                Name = "Hoc ASP .NET core bai so 23",
-                IsComplete = false,
-                Description = "Cai dat cau hinh cho authentication cho TodoList.",
-
-            }
-
-        };
-
-        [HttpGet]
-        public IActionResult GetAll()
+        public TodosController(TodoDbContext context)
         {
+            _context = context;
+        }
+        
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
+        {
+            var items = await _context.TodoItems.ToListAsync();
             return Ok(items);
         }
 
         [HttpGet("{id}")]
-        public IActionResult GetById(int id)
+        public async Task<IActionResult> GetById(int id)
         {
-            var item = items.FirstOrDefault(x => x.Id == id);
+            var item = await _context.TodoItems.FindAsync(id);
             if (item == null)
             {
                 return NotFound();
@@ -49,22 +36,23 @@ namespace TodoAPI.Controllers
         }
 
         [HttpPost] 
-        public IActionResult CreateItem(TodoItem item)
+        public async Task<IActionResult> CreateItem(TodoItem item)
         {
-            var newId = items.Max(x => x.Id) + 1;
-            item.Id = newId;
+           
+            item.Id = 0;
             item.CreatedAt = DateTime.UtcNow;
             item.IsComplete = false;
 
-            items.Add(item);
+            _context.TodoItems.Add(item);
+            await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetById), new { id = item.Id}, item);
         }
 
         [HttpPut("{id}")]
-        public IActionResult UpdateItem(int id, TodoItem updatedItem)
+        public async Task<IActionResult> UpdateItem(int id, TodoItem updatedItem)
         {
-            var item = items.FirstOrDefault(x => x.Id == id);
+            var item = await _context.TodoItems.FindAsync(id);
             if (item == null)
             {
                 return NotFound();
@@ -72,35 +60,40 @@ namespace TodoAPI.Controllers
             item.Name = updatedItem.Name;
             item.Description = updatedItem.Description;
             item.IsComplete = updatedItem.IsComplete;
+
+            await _context.SaveChangesAsync();
+
             return Ok(item);
         }
 
         [HttpDelete("{id}")]
-        public IActionResult DeleteItem(int id)
+        public async Task<IActionResult> DeleteItem(int id)
         {
-            var item = items.FirstOrDefault(x => x.Id == id);
+            var item = await _context.TodoItems.FindAsync(id);
             if (item == null)
             {
                 return NotFound();
             }
-            items.Remove(item);
+
+            _context.TodoItems.Remove(item);
+            await _context.SaveChangesAsync();
+
             return NoContent();
         }
 
         [HttpPatch("{id}/complete")]
-        public IActionResult MarkAsComplete(int id)
+        public async Task<IActionResult> MarkAsComplete(int id)
         {
-            var item = items.FirstOrDefault(x => x.Id == id);
+            var item = await _context.TodoItems.FindAsync(id);
             if (item == null)
             {
                 return NotFound();
             }
+
             item.IsComplete = true;
+            await _context.SaveChangesAsync();
+
             return Ok(item);
         }
-
-
-
-
     }
 }
