@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Mvc;
 using TodoAPI.Models;
 using TodoAPI.Data;
+using TodoAPI.DTOs;
 
 namespace TodoAPI.Controllers
 {
@@ -20,50 +21,86 @@ namespace TodoAPI.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var items = await _context.TodoItems.ToListAsync();
+            var items = await _context.TodoItems
+                .Select(item => new TodoItemDto
+                {
+                    Id = item.Id,
+                    Name = item.Name,
+                    Description = item.Description,
+                    IsComplete = item.IsComplete,
+                    CreatedAt = item.CreatedAt
+                })
+                .ToListAsync();
+
             return Ok(items);
         }
 
         [HttpGet("{id}")]
         public async Task<IActionResult> GetById(int id)
         {
-            var item = await _context.TodoItems.FindAsync(id);
+            var item = await _context.TodoItems.Where(item => item.Id == id)
+                .Select(item => new TodoItemDto
+                {
+                    Id = item.Id,
+                    Name = item.Name,
+                    Description = item.Description,
+                    IsComplete = item.IsComplete,
+                    CreatedAt = item.CreatedAt
+                })
+                .FirstOrDefaultAsync();
+
             if (item == null)
             {
                 return NotFound();
             }
-            return Ok(item);
+
+             return Ok(item);
         }
 
         [HttpPost] 
-        public async Task<IActionResult> CreateItem(TodoItem item)
+        public async Task<IActionResult> CreateItem(CreateItemDto itemDto)
         {
-           
-            item.Id = 0;
-            item.CreatedAt = DateTime.UtcNow;
-            item.IsComplete = false;
-
+            var item = new TodoItem
+            {
+                Name = itemDto.Name,
+                Description = itemDto.Description,
+                IsComplete = false,
+                CreatedAt = DateTime.UtcNow
+            };
+            
             _context.TodoItems.Add(item);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetById), new { id = item.Id}, item);
+            var createdItem = new TodoItemDto
+            {
+                Id = item.Id,
+                Name = item.Name,
+                Description = item.Description,
+                IsComplete = item.IsComplete,
+                CreatedAt = item.CreatedAt
+            };
+
+            return CreatedAtAction(nameof(GetById), new { id = item.Id }, createdItem);
+
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateItem(int id, TodoItem updatedItem)
+        public async Task<IActionResult> UpdateItem(int id, UpdateItemDto updateItemDto)
         {
             var item = await _context.TodoItems.FindAsync(id);
+
             if (item == null)
             {
                 return NotFound();
             }
-            item.Name = updatedItem.Name;
-            item.Description = updatedItem.Description;
-            item.IsComplete = updatedItem.IsComplete;
+
+            item.Name = updateItemDto.Name;
+            item.Description = updateItemDto.Description;
+            item.IsComplete = updateItemDto.IsComplete;
 
             await _context.SaveChangesAsync();
 
-            return Ok(item);
+            return NoContent();
         }
 
         [HttpDelete("{id}")]
@@ -93,7 +130,16 @@ namespace TodoAPI.Controllers
             item.IsComplete = true;
             await _context.SaveChangesAsync();
 
-            return Ok(item);
+            var itemDto = new TodoItemDto
+            {
+                Id = item.Id,
+                Name = item.Name,
+                Description = item.Description,
+                IsComplete = item.IsComplete,
+                CreatedAt = item.CreatedAt
+            };
+
+            return Ok(itemDto);
         }
     }
 }
