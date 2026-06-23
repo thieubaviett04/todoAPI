@@ -54,20 +54,41 @@ namespace TodoAPI.Service
             return true;
         }
 
-        public Task<List<TodoItemDto>> GetAllAsync()
+        public async Task<List<TodoItemDto>> GetAllAsync(TodoQueryDto todoQueryDto)
         {
-            var items = _context.TodoItems
-                .Select(item => new TodoItemDto
-                {
-                    Id = item.Id,
-                    Name = item.Name,
-                    IsComplete = item.IsComplete,
-                    Description = item.Description,
-                    CreatedAt = item.CreatedAt
-                })
-                .ToListAsync();
+            var items = _context.TodoItems.AsQueryable();
 
-            return items;
+            if (!string.IsNullOrEmpty(todoQueryDto.SearchTodo))
+            {
+                items = items.Where(item => item.Name.Contains(todoQueryDto.SearchTodo) || item.Description != null && item.Description.Contains(todoQueryDto.SearchTodo));
+            }
+
+            if (todoQueryDto.IsComplete.HasValue)
+            {
+                items = items.Where(item => item.IsComplete == todoQueryDto.IsComplete.Value);
+            }
+
+            items = todoQueryDto.SortBy?.ToLower() switch
+            {
+                "name" => todoQueryDto.SortOrder?.ToLower() == "desc" 
+                ? items.OrderByDescending(item => item.Name) 
+                : items.OrderBy(item => item.Name),
+
+                "createdat" => todoQueryDto.SortOrder?.ToLower() == "desc" 
+                ? items.OrderByDescending(item => item.CreatedAt)
+                : items.OrderBy(item => item.CreatedAt),
+
+                _ => items.OrderBy(item => item.Id)
+            };
+
+            return await items.Select(item => new TodoItemDto
+            {
+                Id = item.Id,
+                Name = item.Name,
+                IsComplete = item.IsComplete,
+                Description = item.Description,
+                CreatedAt = item.CreatedAt
+            }).ToListAsync();
         }
 
         public Task<TodoItemDto?> GetByIdAsync(int id)
