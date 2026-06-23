@@ -1,8 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.EntityFrameworkCore;
+﻿
 using Microsoft.AspNetCore.Mvc;
-using TodoAPI.Models;
-using TodoAPI.Data;
 using TodoAPI.DTOs;
 using TodoAPI.Service;
 
@@ -20,9 +17,9 @@ namespace TodoAPI.Controllers
         }
         
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] TodoQueryDto todoQueryDto)
         {
-            var items = await _todoService.GetAllAsync();
+            var items = await _todoService.GetAllAsync(todoQueryDto);
     
             return Ok(items);
         }

@@ -4,7 +4,7 @@ namespace TodoAPI.Service
 {
     public interface ITodoService
     {
-        Task<List<TodoItemDto>> GetAllAsync();
+        Task<List<TodoItemDto>> GetAllAsync(TodoQueryDto todoQueryDto);
         Task<TodoItemDto?> GetByIdAsync(int id);
         Task<TodoItemDto> CreateAsync(CreateItemDto createItemDto);
         Task<bool> UpdateAsync(int id, UpdateItemDto updateItemDto);
